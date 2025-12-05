@@ -24,9 +24,9 @@ def create_app():
     # --------------------------------------------------
     @app.get("/create_tables")
     def create_tables():
-        db.create_all()
+        with app.app_context():
+            db.create_all()
         return {"status": "tables created"}
-
     # --------------------------------------------------
     # Health Check
     # --------------------------------------------------
