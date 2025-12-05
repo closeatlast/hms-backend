@@ -116,7 +116,21 @@ def create_app():
     def list_doctors():
         rows = Doctor.query.all()
         return jsonify([{c.name: getattr(r, c.name) for c in r.__table__.columns} for r in rows])
+    # --------------------------------------------------
+    # CREATE DOCTOR
+    # --------------------------------------------------
+    @app.post("/api/doctors")
+    def create_doctor():
+        d = request.json or {}
+        doctor = Doctor(
+            Name=d.get("Name"),
+            Specialty=d.get("Specialty"),
+            Contact=d.get("Contact")
+        )
+        db.session.add(doctor)
+        db.session.commit()
 
+        return {"created": doctor.Doctor_ID}, 201
     # --------------------------------------------------
     # BILLS
     # --------------------------------------------------
