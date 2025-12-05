@@ -4,21 +4,28 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 from sqlalchemy import func
-from models import db, Patient, Doctor, Bill
-
-# NEW MODELS IMPORTS
-from models import Visit, Recommendation, Schedule, Resource
+from models import db, Patient, Doctor, Bill, Visit, Recommendation, Schedule, Resource
 
 load_dotenv()
 
 
 def create_app():
     app = Flask(__name__)
-    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
+
+    # IMPORTANT: You are using SQLite on Render
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///render_temp.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     CORS(app)
     db.init_app(app)
+
+    # --------------------------------------------------
+    # TEMPORARY: Create Tables on Render (run once)
+    # --------------------------------------------------
+    @app.get("/create_tables")
+    def create_tables():
+        db.create_all()
+        return {"status": "tables created"}
 
     # --------------------------------------------------
     # Health Check
@@ -154,7 +161,7 @@ def create_app():
         return {"created": r.Rec_ID}
 
     # --------------------------------------------------
-    # SCHEDULE (Employee)
+    # SCHEDULE
     # --------------------------------------------------
     @app.get("/api/schedule/<int:eid>")
     def get_schedule(eid):
@@ -170,7 +177,7 @@ def create_app():
         return jsonify([{c.name: getattr(r, c.name) for c in r.__table__.columns} for r in rows])
 
     # --------------------------------------------------
-    # ANALYTICS — PATIENT FLOW PREDICTION
+    # ANALYTICS — PATIENT FLOW
     # --------------------------------------------------
     @app.get("/api/analytics/patient_flow")
     def patient_flow():
@@ -217,7 +224,6 @@ def create_app():
 
 
 app = create_app()
-
 
 if __name__ == "__main__":
     app.run(port=5001, debug=True)
