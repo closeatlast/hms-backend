@@ -4,67 +4,92 @@ from datetime import datetime
 db = SQLAlchemy()
 
 # --------------------------------------------------
-# EMPLOYEE (SUPERCLASS)
+# EMPLOYEE (ISA parent)
 # --------------------------------------------------
 class Employee(db.Model):
     __tablename__ = "EMPLOYEE"
 
     Employee_ID = db.Column(db.Integer, primary_key=True)
     Name = db.Column(db.String(100))
-    Salary = db.Column(db.Float)
-    Role = db.Column(db.String(50))   # "Doctor", "Nurse", "Receptionist"
+    Salary = db.Column(db.Numeric(12, 2))
+
+    Type = db.Column(db.String(50))
 
     __mapper_args__ = {
-        'polymorphic_on': Role,
-        'polymorphic_identity': 'Employee'
+        "polymorphic_identity": "Employee",
+        "polymorphic_on": Type
     }
 
-
 # --------------------------------------------------
-# DOCTOR (SUBCLASS OF EMPLOYEE)
+# DOCTOR (ISA EMPLOYEE)
 # --------------------------------------------------
 class Doctor(Employee):
     __tablename__ = "DOCTOR"
 
-    Doctor_ID = db.Column(db.Integer, db.ForeignKey("EMPLOYEE.Employee_ID"), primary_key=True)
+    Doctor_ID = db.Column(
+        db.Integer,
+        db.ForeignKey("EMPLOYEE.Employee_ID"),
+        primary_key=True
+    )
+
     Specialty = db.Column(db.String(100))
     Contact = db.Column(db.String(100))
 
     __mapper_args__ = {
-        'polymorphic_identity': 'Doctor'
+        "polymorphic_identity": "Doctor"
     }
 
-
 # --------------------------------------------------
-# NURSE (SUBCLASS OF EMPLOYEE)
+# NURSE (ISA EMPLOYEE)
 # --------------------------------------------------
 class Nurse(Employee):
     __tablename__ = "NURSE"
 
-    Nurse_ID = db.Column(db.Integer, db.ForeignKey("EMPLOYEE.Employee_ID"), primary_key=True)
-    Certification = db.Column(db.String(100))
+    Nurse_ID = db.Column(
+        db.Integer,
+        db.ForeignKey("EMPLOYEE.Employee_ID"),
+        primary_key=True
+    )
+
+    Contact = db.Column(db.String(100))
 
     __mapper_args__ = {
-        'polymorphic_identity': 'Nurse'
+        "polymorphic_identity": "Nurse"
     }
 
-
 # --------------------------------------------------
-# RECEPTIONIST (SUBCLASS OF EMPLOYEE)
+# RECEPTIONIST (ISA EMPLOYEE)
 # --------------------------------------------------
 class Receptionist(Employee):
     __tablename__ = "RECEPTIONIST"
 
-    Receptionist_ID = db.Column(db.Integer, db.ForeignKey("EMPLOYEE.Employee_ID"), primary_key=True)
-    DeskNumber = db.Column(db.String(20))
+    Receptionist_ID = db.Column(
+        db.Integer,
+        db.ForeignKey("EMPLOYEE.Employee_ID"),
+        primary_key=True
+    )
+
+    Contact = db.Column(db.String(100))
 
     __mapper_args__ = {
-        'polymorphic_identity': 'Receptionist'
+        "polymorphic_identity": "Receptionist"
     }
 
+# --------------------------------------------------
+# ROOM
+# --------------------------------------------------
+class Room(db.Model):
+    __tablename__ = "ROOM"
+
+    Room_ID = db.Column(db.Integer, primary_key=True)
+    Room_Number = db.Column(db.String(20))
+    Room_Type = db.Column(db.String(50))
+    Status = db.Column(db.String(50))  # Available / Occupied
+
+    Nurse_ID = db.Column(db.Integer, db.ForeignKey("NURSE.Nurse_ID"))
 
 # --------------------------------------------------
-# PATIENT TABLE
+# PATIENT
 # --------------------------------------------------
 class Patient(db.Model):
     __tablename__ = "PATIENT"
@@ -79,50 +104,24 @@ class Patient(db.Model):
     Admitted = db.Column(db.Boolean, default=False)
     Description = db.Column(db.Text)
     Discharged = db.Column(db.Boolean, default=False)
-
-    # NEW FOR STAGE 5
     AdmissionDate = db.Column(db.Date, nullable=True)
     DischargeDate = db.Column(db.Date, nullable=True)
 
-    # NEW: Room assignment
-    Room_ID = db.Column(db.Integer, db.ForeignKey("ROOM.Room_ID"), nullable=True)
-
+    Room_ID = db.Column(db.Integer, db.ForeignKey("ROOM.Room_ID"))
 
 # --------------------------------------------------
-# ROOM TABLE
-# --------------------------------------------------
-class Room(db.Model):
-    __tablename__ = "ROOM"
-
-    Room_ID = db.Column(db.Integer, primary_key=True)
-    Room_Number = db.Column(db.String(10))
-    Room_Type = db.Column(db.String(50))  # ICU, General, Surgery, etc.
-    Status = db.Column(db.String(50))     # Available, Occupied, Cleaning
-
-    # Room assigned to Patient
-    Assigned_Patient = db.Column(db.Integer, db.ForeignKey("PATIENT.Patient_ID"), nullable=True)
-
-    # Nurse who manages the room
-    Managed_By_Nurse = db.Column(db.Integer, db.ForeignKey("NURSE.Nurse_ID"), nullable=True)
-
-
-# --------------------------------------------------
-# MEDICATION TABLE
+# MEDICATION
 # --------------------------------------------------
 class Medication(db.Model):
     __tablename__ = "MEDICATION"
 
     Medication_ID = db.Column(db.Integer, primary_key=True)
     Name = db.Column(db.String(100))
-    Type = db.Column(db.String(50))
-    Dosage = db.Column(db.String(50))
-    Cost = db.Column(db.Float)
-
+    Dosage = db.Column(db.String(100))
     Patient_ID = db.Column(db.Integer, db.ForeignKey("PATIENT.Patient_ID"))
 
-
 # --------------------------------------------------
-# BILL TABLE
+# BILL
 # --------------------------------------------------
 class Bill(db.Model):
     __tablename__ = "BILL"
@@ -132,9 +131,8 @@ class Bill(db.Model):
     Treatment = db.Column(db.Text)
     Total_Amount = db.Column(db.Numeric(12, 2))
 
-
 # --------------------------------------------------
-# VISIT TABLE
+# VISIT
 # --------------------------------------------------
 class Visit(db.Model):
     __tablename__ = "VISIT"
@@ -145,9 +143,8 @@ class Visit(db.Model):
     VisitDate = db.Column(db.Date)
     Notes = db.Column(db.Text)
 
-
 # --------------------------------------------------
-# RECOMMENDATIONS
+# RECOMMENDATION
 # --------------------------------------------------
 class Recommendation(db.Model):
     __tablename__ = "RECOMMENDATION"
@@ -156,9 +153,8 @@ class Recommendation(db.Model):
     Patient_ID = db.Column(db.Integer)
     Text = db.Column(db.Text)
 
-
 # --------------------------------------------------
-# EMPLOYEE SCHEDULE
+# SCHEDULE
 # --------------------------------------------------
 class Schedule(db.Model):
     __tablename__ = "SCHEDULE"
@@ -168,9 +164,8 @@ class Schedule(db.Model):
     WorkDate = db.Column(db.Date)
     Shift = db.Column(db.String(50))
 
-
 # --------------------------------------------------
-# RESOURCE TABLE
+# RESOURCE
 # --------------------------------------------------
 class Resource(db.Model):
     __tablename__ = "RESOURCE"
@@ -178,4 +173,4 @@ class Resource(db.Model):
     Resource_ID = db.Column(db.Integer, primary_key=True)
     Name = db.Column(db.String(100))
     Quantity = db.Column(db.Integer)
-    Status = db.Column(db.String(50))  # Available, Low Stock, In Use
+    Status = db.Column(db.String(50))
