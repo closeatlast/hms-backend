@@ -131,6 +131,24 @@ def create_app():
         db.session.commit()
 
         return {"created": doctor.Doctor_ID}, 201
+    # UPDATE DOCTOR
+    @app.put("/api/doctors/<int:did>")
+    def update_doctor(did):
+        d = Doctor.query.get_or_404(did)
+        data = request.json or {}
+
+        if "Name" in data:
+            d.Name = data["Name"]
+        if "Specialty" in data:
+            d.Specialty = data["Specialty"]
+        if "Contact" in data:
+            d.Contact = data["Contact"]
+
+        db.session.commit()
+
+        return {c.name: getattr(d, c.name) for c in d.__table__.columns}
+
+
     # --------------------------------------------------
     # BILLS
     # --------------------------------------------------
