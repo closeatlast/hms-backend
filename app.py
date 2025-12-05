@@ -13,36 +13,26 @@ from models import (
 
 load_dotenv()
 
-
 def create_app():
     app = Flask(__name__)
 
-    # SQLite for Render
+    # SQLite on Render
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///render_temp2.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     CORS(app)
     db.init_app(app)
 
-    # --------------------------------------------------
-    # ROOT
-    # --------------------------------------------------
     @app.get("/")
     def index():
         return {"message": "Backend is running"}
 
-    # --------------------------------------------------
-    # CREATE TABLES
-    # --------------------------------------------------
     @app.get("/create_tables")
     def create_tables():
         with app.app_context():
             db.create_all()
         return {"status": "tables created"}
 
-    # --------------------------------------------------
-    # HEALTH CHECK
-    # --------------------------------------------------
     @app.get("/api/health")
     def health():
         return {"status": "ok"}
@@ -70,8 +60,8 @@ def create_app():
             Sex=d.get("Sex"),
             Contact=d.get("Contact"),
             Insurance_Provider=d.get("Insurance_Provider"),
-            Admitted=bool(d.get("Admitted", False)),
-            Discharged=bool(d.get("Discharged", False)),
+            Admitted=d.get("Admitted", False),
+            Discharged=d.get("Discharged", False),
             Description=d.get("Description"),
             AdmissionDate=datetime.fromisoformat(d["AdmissionDate"]).date()
                 if d.get("AdmissionDate") else None,
@@ -88,14 +78,12 @@ def create_app():
         p = Patient.query.get_or_404(pid)
         d = request.json or {}
 
-        update_fields = [
+        for field in [
             "SSN", "Name", "Sex", "Contact", "Insurance_Provider",
             "Description", "Admitted", "Discharged", "Room_ID"
-        ]
-
-        for f in update_fields:
-            if f in d:
-                setattr(p, f, d[f])
+        ]:
+            if field in d:
+                setattr(p, field, d[field])
 
         if "DOB" in d:
             p.DOB = datetime.fromisoformat(d["DOB"]).date() if d["DOB"] else None
@@ -117,7 +105,7 @@ def create_app():
         return {"deleted": pid}
 
     # --------------------------------------------------
-    # EMPLOYEE CRUD (parent ISA entity)
+    # EMPLOYEE (ISA parent)
     # --------------------------------------------------
     @app.get("/api/employees")
     def list_employees():
@@ -133,50 +121,46 @@ def create_app():
         return {"created": e.Employee_ID}, 201
 
     # --------------------------------------------------
-    # DOCTOR ROUTES (ISA Employee)
+    # DOCTOR (ISA: automatic employee creation)
     # --------------------------------------------------
     @app.post("/api/doctors")
     def create_doctor():
         d = request.json or {}
 
-        # First create Employee
         e = Employee(Name=d.get("Name"), Salary=d.get("Salary"))
         db.session.add(e)
         db.session.commit()
 
         doctor = Doctor(
             Employee_ID=e.Employee_ID,
-            Name=d.get("Name"),
             Specialty=d.get("Specialty"),
-            Contact=d.get("Contact")
+            Contact=d.get("Contact"),
+            Name=d.get("Name")
         )
         db.session.add(doctor)
         db.session.commit()
 
         return {"created": doctor.Doctor_ID}, 201
 
-    @app.put("/api/doctors/<int:did>")
-    def update_doctor(did):
-        d = Doctor.query.get_or_404(did)
-        data = request.json or {}
-
-        if "Name" in data:
-            d.Name = data["Name"]
-        if "Specialty" in data:
-            d.Specialty = data["Specialty"]
-        if "Contact" in data:
-            d.Contact = data["Contact"]
-
-        db.session.commit()
-        return {c.name: getattr(d, c.name) for c in d.__table__.columns}
-
     @app.get("/api/doctors")
     def list_doctors():
         rows = Doctor.query.all()
         return jsonify([{c.name: getattr(r, c.name) for c in r.__table__.columns} for r in rows])
 
+    @app.put("/api/doctors/<int:did>")
+    def update_doctor(did):
+        d = Doctor.query.get_or_404(did)
+        data = request.json or {}
+
+        for field in ["Name", "Specialty", "Contact"]:
+            if field in data:
+                setattr(d, field, data[field])
+
+        db.session.commit()
+        return {c.name: getattr(d, c.name) for c in d.__table__.columns}
+
     # --------------------------------------------------
-    # NURSE ROUTES
+    # NURSE (ISA)
     # --------------------------------------------------
     @app.post("/api/nurses")
     def create_nurse():
@@ -202,7 +186,7 @@ def create_app():
         return jsonify([{c.name: getattr(n, c.name) for c in n.__table__.columns} for n in rows])
 
     # --------------------------------------------------
-    # RECEPTIONIST
+    # RECEPTIONIST (ISA)
     # --------------------------------------------------
     @app.post("/api/receptionists")
     def create_receptionist():
@@ -228,7 +212,7 @@ def create_app():
         return jsonify([{c.name: getattr(x, c.name) for c in x.__table__.columns} for x in rows])
 
     # --------------------------------------------------
-    # ROOM CRUD
+    # ROOM
     # --------------------------------------------------
     @app.post("/api/rooms")
     def create_room():
@@ -249,7 +233,7 @@ def create_app():
         return jsonify([{c.name: getattr(r, c.name) for c in r.__table__.columns} for r in rows])
 
     # --------------------------------------------------
-    # MEDICATION CRUD
+    # MEDICATION
     # --------------------------------------------------
     @app.post("/api/medications")
     def create_medication():
@@ -269,8 +253,7 @@ def create_app():
         return jsonify([{c.name: getattr(m, c.name) for c in m.__table__.columns} for m in rows])
 
     # --------------------------------------------------
-    # EXISTING BILL, VISIT, RECOMMENDATION, SCHEDULE, RESOURCE
-    # (unchanged)
+    # EXISTING BILL / VISIT / RECOMMENDATION / SCHEDULE / RESOURCE
     # --------------------------------------------------
 
     @app.get("/api/bills")
@@ -283,14 +266,9 @@ def create_app():
         rows = Bill.query.filter_by(Patient_ID=pid).all()
         return jsonify([{c.name: getattr(b, c.name) for c in b.__table__.columns} for b in rows])
 
-    @app.get("/api/visits/<int:pid>")
-    def get_visits(pid):
-        rows = Visit.query.filter_by(Patient_ID=pid).all()
-        return jsonify([{c.name: getattr(v, c.name) for c in v.__table__.columns} for v in rows])
-
     @app.post("/api/visits")
     def create_visit():
-        d = request.json
+        d = request.json or {}
         v = Visit(
             Patient_ID=d["Patient_ID"],
             Doctor_ID=d["Doctor_ID"],
@@ -301,18 +279,23 @@ def create_app():
         db.session.commit()
         return {"created": v.Visit_ID}
 
-    @app.get("/api/recommendations/<int:pid>")
-    def get_recommendations(pid):
-        rows = Recommendation.query.filter_by(Patient_ID=pid).all()
-        return jsonify([{c.name: getattr(r, c.name) for c in r.__table__.columns} for r in rows])
+    @app.get("/api/visits/<int:pid>")
+    def get_visits(pid):
+        rows = Visit.query.filter_by(Patient_ID=pid).all()
+        return jsonify([{c.name: getattr(v, c.name) for c in v.__table__.columns} for v in rows])
 
     @app.post("/api/recommendations")
     def create_recommendation():
-        d = request.json
+        d = request.json or {}
         r = Recommendation(Patient_ID=d["Patient_ID"], Text=d["Text"])
         db.session.add(r)
         db.session.commit()
         return {"created": r.Rec_ID}
+
+    @app.get("/api/recommendations/<int:pid>")
+    def get_recommendations(pid):
+        rows = Recommendation.query.filter_by(Patient_ID=pid).all()
+        return jsonify([{c.name: getattr(x, c.name) for c in x.__table__.columns} for x in rows])
 
     @app.get("/api/schedule/<int:eid>")
     def get_schedule(eid):
