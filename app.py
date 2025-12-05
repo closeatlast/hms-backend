@@ -113,8 +113,31 @@ def create_app():
     # --------------------------------------------------
     @app.get("/api/employees")
     def list_employees():
-        rows = Employee.query.all()
-        return jsonify([{c.name: getattr(e, c.name) for c in e.__table__.columns} for e in rows])
+        employees = Employee.query.all()
+
+        output = []
+        for e in employees:
+            data = {
+            "Employee_ID": e.Employee_ID,
+            "Name": e.Name,
+            "Salary": float(e.Salary) if e.Salary else None,
+            "Type": e.Type
+            }
+
+            # Include subclass-specific fields
+            if isinstance(e, Doctor):
+                data["Specialty"] = e.Specialty
+                data["Contact"] = e.Contact
+
+            if isinstance(e, Nurse):
+                data["Contact"] = e.Contact
+
+            if isinstance(e, Receptionist):
+                data["Contact"] = e.Contact
+            output.append(data)
+
+        return jsonify(output)
+
 
     @app.post("/api/employees")
     def create_employee():
