@@ -13,7 +13,7 @@ def create_app():
     app = Flask(__name__)
 
     # IMPORTANT: You are using SQLite on Render
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///render_temp.db"
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///render_temp2.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     CORS(app)
