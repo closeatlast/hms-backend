@@ -18,7 +18,14 @@ def create_app():
 
     CORS(app)
     db.init_app(app)
-
+    
+    # --------------------------------------------------
+    # ROOT ROUTE (shows backend is running)
+    # --------------------------------------------------
+    @app.get("/")
+    def index():
+        return {"message": "Backend is running"}
+    
     # --------------------------------------------------
     # TEMPORARY: Create Tables on Render (run once)
     # --------------------------------------------------
