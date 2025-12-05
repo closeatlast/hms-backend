@@ -13,6 +13,7 @@ from models import (
 
 load_dotenv()
 
+
 def create_app():
     app = Flask(__name__)
 
@@ -23,6 +24,9 @@ def create_app():
     CORS(app)
     db.init_app(app)
 
+    # --------------------------------------------------
+    # ROOT / HEALTH / CREATE TABLES
+    # --------------------------------------------------
     @app.get("/")
     def index():
         return {"message": "Backend is running"}
@@ -60,8 +64,8 @@ def create_app():
             Sex=d.get("Sex"),
             Contact=d.get("Contact"),
             Insurance_Provider=d.get("Insurance_Provider"),
-            Admitted=d.get("Admitted", False),
-            Discharged=d.get("Discharged", False),
+            Admitted=bool(d.get("Admitted", False)),
+            Discharged=bool(d.get("Discharged", False)),
             Description=d.get("Description"),
             AdmissionDate=datetime.fromisoformat(d["AdmissionDate"]).date()
                 if d.get("AdmissionDate") else None,
@@ -121,21 +125,18 @@ def create_app():
         return {"created": e.Employee_ID}, 201
 
     # --------------------------------------------------
-    # DOCTOR (ISA: automatic employee creation)
+    # DOCTOR (ISA Employee) – CORRECTED
     # --------------------------------------------------
     @app.post("/api/doctors")
     def create_doctor():
         d = request.json or {}
 
-        e = Employee(Name=d.get("Name"), Salary=d.get("Salary"))
-        db.session.add(e)
-        db.session.commit()
-
+        # Because Doctor inherits from Employee, just create the Doctor.
         doctor = Doctor(
-            Employee_ID=e.Employee_ID,
+            Name=d.get("Name"),
+            Salary=d.get("Salary"),
             Specialty=d.get("Specialty"),
-            Contact=d.get("Contact"),
-            Name=d.get("Name")
+            Contact=d.get("Contact")
         )
         db.session.add(doctor)
         db.session.commit()
@@ -145,34 +146,46 @@ def create_app():
     @app.get("/api/doctors")
     def list_doctors():
         rows = Doctor.query.all()
-        return jsonify([{c.name: getattr(r, c.name) for c in r.__table__.columns} for r in rows])
+        # include inherited columns too
+        result = []
+        for doc in rows:
+            result.append({
+                "Doctor_ID": doc.Doctor_ID,
+                "Name": doc.Name,
+                "Salary": float(doc.Salary) if doc.Salary is not None else None,
+                "Specialty": doc.Specialty,
+                "Contact": doc.Contact,
+            })
+        return jsonify(result)
 
     @app.put("/api/doctors/<int:did>")
     def update_doctor(did):
-        d = Doctor.query.get_or_404(did)
+        d_obj = Doctor.query.get_or_404(did)
         data = request.json or {}
 
-        for field in ["Name", "Specialty", "Contact"]:
+        for field in ["Name", "Salary", "Specialty", "Contact"]:
             if field in data:
-                setattr(d, field, data[field])
+                setattr(d_obj, field, data[field])
 
         db.session.commit()
-        return {c.name: getattr(d, c.name) for c in d.__table__.columns}
+        return {
+            "Doctor_ID": d_obj.Doctor_ID,
+            "Name": d_obj.Name,
+            "Salary": float(d_obj.Salary) if d_obj.Salary is not None else None,
+            "Specialty": d_obj.Specialty,
+            "Contact": d_obj.Contact,
+        }
 
     # --------------------------------------------------
-    # NURSE (ISA)
+    # NURSE (ISA Employee) – CORRECTED
     # --------------------------------------------------
     @app.post("/api/nurses")
     def create_nurse():
         d = request.json or {}
 
-        e = Employee(Name=d.get("Name"), Salary=d.get("Salary"))
-        db.session.add(e)
-        db.session.commit()
-
         nurse = Nurse(
-            Employee_ID=e.Employee_ID,
             Name=d.get("Name"),
+            Salary=d.get("Salary"),
             Contact=d.get("Contact")
         )
         db.session.add(nurse)
@@ -183,22 +196,26 @@ def create_app():
     @app.get("/api/nurses")
     def list_nurses():
         rows = Nurse.query.all()
-        return jsonify([{c.name: getattr(n, c.name) for c in n.__table__.columns} for n in rows])
+        result = []
+        for n in rows:
+            result.append({
+                "Nurse_ID": n.Nurse_ID,
+                "Name": n.Name,
+                "Salary": float(n.Salary) if n.Salary is not None else None,
+                "Contact": n.Contact,
+            })
+        return jsonify(result)
 
     # --------------------------------------------------
-    # RECEPTIONIST (ISA)
+    # RECEPTIONIST (ISA Employee) – CORRECTED
     # --------------------------------------------------
     @app.post("/api/receptionists")
     def create_receptionist():
         d = request.json or {}
 
-        e = Employee(Name=d.get("Name"), Salary=d.get("Salary"))
-        db.session.add(e)
-        db.session.commit()
-
         r = Receptionist(
-            Employee_ID=e.Employee_ID,
             Name=d.get("Name"),
+            Salary=d.get("Salary"),
             Contact=d.get("Contact")
         )
         db.session.add(r)
@@ -209,7 +226,15 @@ def create_app():
     @app.get("/api/receptionists")
     def list_receptionists():
         rows = Receptionist.query.all()
-        return jsonify([{c.name: getattr(x, c.name) for c in x.__table__.columns} for x in rows])
+        result = []
+        for x in rows:
+            result.append({
+                "Receptionist_ID": x.Receptionist_ID,
+                "Name": x.Name,
+                "Salary": float(x.Salary) if x.Salary is not None else None,
+                "Contact": x.Contact,
+            })
+        return jsonify(result)
 
     # --------------------------------------------------
     # ROOM
@@ -253,9 +278,8 @@ def create_app():
         return jsonify([{c.name: getattr(m, c.name) for c in m.__table__.columns} for m in rows])
 
     # --------------------------------------------------
-    # EXISTING BILL / VISIT / RECOMMENDATION / SCHEDULE / RESOURCE
+    # BILLS / VISITS / RECOMMENDATIONS / SCHEDULE / RESOURCE
     # --------------------------------------------------
-
     @app.get("/api/bills")
     def list_bills():
         rows = Bill.query.all()
@@ -277,7 +301,7 @@ def create_app():
         )
         db.session.add(v)
         db.session.commit()
-        return {"created": v.Visit_ID}
+        return {"created": v.Visit_ID}, 201
 
     @app.get("/api/visits/<int:pid>")
     def get_visits(pid):
@@ -290,7 +314,7 @@ def create_app():
         r = Recommendation(Patient_ID=d["Patient_ID"], Text=d["Text"])
         db.session.add(r)
         db.session.commit()
-        return {"created": r.Rec_ID}
+        return {"created": r.Rec_ID}, 201
 
     @app.get("/api/recommendations/<int:pid>")
     def get_recommendations(pid):
