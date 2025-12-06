@@ -394,6 +394,21 @@ def create_app():
             {c.name: getattr(r, c.name) for c in r.__table__.columns}
             for r in rows
         ])
+    @app.post("/api/bills")
+    def create_bill():
+        d = request.json or {}
+
+        b = Bill(
+            Patient_ID=d.get("Patient_ID"),
+            Treatment=d.get("Treatment"),
+            Total_Amount=d.get("Total_Amount")
+        )
+
+        db.session.add(b)
+        db.session.commit()
+
+        return {"created": b.Bill_ID}, 201
+
 
     @app.get("/api/patients/<int:pid>/bills")
     def bills_for_patient(pid):
@@ -455,6 +470,21 @@ def create_app():
             {c.name: getattr(r, c.name) for c in r.__table__.columns}
             for r in rows
         ])
+    @app.post("/api/resources")
+    def create_resource():
+        d = request.json or {}
+
+        r = Resource(
+            Name=d.get("Name"),
+            Quantity=d.get("Quantity"),
+            Status=d.get("Status")
+        )
+
+        db.session.add(r)
+        db.session.commit()
+
+        return {"created": r.Resource_ID}, 201
+
 
     # --------------------------------------------------
     # ANALYTICS
