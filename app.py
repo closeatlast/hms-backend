@@ -17,16 +17,14 @@ load_dotenv()
 def create_app():
     app = Flask(__name__)
 
-    # SQLite on Render
+    
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///render_temp2.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     CORS(app)
     db.init_app(app)
 
-    # --------------------------------------------------
-    # ROOT / HEALTH / CREATE TABLES
-    # --------------------------------------------------
+
     @app.get("/")
     def index():
         return {"message": "Backend is running"}
@@ -41,9 +39,7 @@ def create_app():
     def health():
         return {"status": "ok"}
 
-    # --------------------------------------------------
-    # PATIENT CRUD
-    # --------------------------------------------------
+
     @app.get("/api/patients")
     def list_patients():
         rows = Patient.query.all()
@@ -111,9 +107,7 @@ def create_app():
         db.session.commit()
         return {"deleted": pid}
 
-    # --------------------------------------------------
-    # EMPLOYEE (ISA parent)
-    # --------------------------------------------------
+
     @app.get("/api/employees")
     def list_employees():
         employees = Employee.query.all()
@@ -144,9 +138,7 @@ def create_app():
 
         return jsonify(output)
 
-    # --------------------------------------------------
-    # DOCTOR CRUD (ISA)
-    # --------------------------------------------------
+
     @app.post("/api/doctors")
     def create_doctor():
         d = request.json or {}
@@ -211,9 +203,7 @@ def create_app():
         db.session.commit()
         return {"deleted": did}
 
-    # --------------------------------------------------
-    # NURSE CRUD (ISA)
-    # --------------------------------------------------
+
     @app.post("/api/nurses")
     def create_nurse():
         d = request.json or {}
@@ -274,9 +264,7 @@ def create_app():
         db.session.commit()
         return {"deleted": nid}
 
-    # --------------------------------------------------
-    # RECEPTIONIST CRUD (ISA)
-    # --------------------------------------------------
+
     @app.post("/api/receptionists")
     def create_receptionist():
         d = request.json or {}
@@ -337,9 +325,7 @@ def create_app():
         db.session.commit()
         return {"deleted": rid}
 
-    # --------------------------------------------------
-    # ROOM CRUD
-    # --------------------------------------------------
+
     @app.post("/api/rooms")
     def create_room():
         d = request.json or {}
@@ -361,9 +347,7 @@ def create_app():
             for r in rows
         ])
 
-    # --------------------------------------------------
-    # MEDICATION CRUD
-    # --------------------------------------------------
+
     @app.post("/api/medications")
     def create_medication():
         d = request.json or {}
@@ -384,9 +368,7 @@ def create_app():
             for m in rows
         ])
 
-    # --------------------------------------------------
-    # BILLS / VISITS / RECOMMENDATIONS / SCHEDULE / RESOURCE
-    # --------------------------------------------------
+
     @app.get("/api/bills")
     def list_bills():
         rows = Bill.query.all()
@@ -486,9 +468,7 @@ def create_app():
         return {"created": r.Resource_ID}, 201
 
 
-    # --------------------------------------------------
-    # ANALYTICS
-    # --------------------------------------------------
+
     @app.get("/api/analytics/patient_flow")
     def patient_flow():
         rows = (
@@ -526,9 +506,7 @@ def create_app():
             ]
         }
 
-    # --------------------------------------------------
-    # ROOM SHORTAGE FORECAST (ADVANCED ANALYTICS)
-    # --------------------------------------------------
+
     @app.get("/api/analytics/room_shortage_forecast")
     def room_shortage_forecast():
         total_rooms = Room.query.count()
@@ -586,9 +564,7 @@ def create_app():
             "projected_shortage_in_days": round(projected_shortage_days, 2) if projected_shortage_days else None,
             "risk": risk
         }
-    # --------------------------------------------------
-    # RESOURCE OPTIMIZATION (NEW ADVANCED ANALYTICS)
-    # --------------------------------------------------
+
     @app.get("/api/analytics/resource_optimization_v2")
     def resource_optimization_v2():
 
@@ -618,7 +594,7 @@ def create_app():
             .all()
         )
 
-        # 3. EQUIPMENT USAGE SUMMARY (grouped by Resource.Name)
+        # 3. EQUIPMENT USAGE SUMMARY 
         equipment_usage = (
             db.session.query(
                 Resource.Name,
