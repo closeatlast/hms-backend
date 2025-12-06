@@ -24,9 +24,9 @@ def create_app():
     CORS(app)
     db.init_app(app)
 
-    # ---------------------------------------------
+    # --------------------------------------------------
     # ROOT / HEALTH / CREATE TABLES
-    # ---------------------------------------------
+    # --------------------------------------------------
     @app.get("/")
     def index():
         return {"message": "Backend is running"}
@@ -41,13 +41,16 @@ def create_app():
     def health():
         return {"status": "ok"}
 
-    # ---------------------------------------------
+    # --------------------------------------------------
     # PATIENT CRUD
-    # ---------------------------------------------
+    # --------------------------------------------------
     @app.get("/api/patients")
     def list_patients():
         rows = Patient.query.all()
-        return jsonify([{c.name: getattr(p, c.name) for c in p.__table__.columns} for p in rows])
+        return jsonify([
+            {c.name: getattr(p, c.name) for c in p.__table__.columns}
+            for p in rows
+        ])
 
     @app.get("/api/patients/<int:pid>")
     def get_patient(pid):
@@ -108,9 +111,9 @@ def create_app():
         db.session.commit()
         return {"deleted": pid}
 
-    # ---------------------------------------------
-    # EMPLOYEES (PARENT)
-    # ---------------------------------------------
+    # --------------------------------------------------
+    # EMPLOYEE (ISA parent)
+    # --------------------------------------------------
     @app.get("/api/employees")
     def list_employees():
         employees = Employee.query.all()
@@ -141,17 +144,9 @@ def create_app():
 
         return jsonify(output)
 
-    @app.post("/api/employees")
-    def create_employee():
-        d = request.json or {}
-        e = Employee(Name=d.get("Name"), Salary=d.get("Salary"))
-        db.session.add(e)
-        db.session.commit()
-        return {"created": e.Employee_ID}, 201
-
-    # ---------------------------------------------
+    # --------------------------------------------------
     # DOCTOR CRUD (ISA)
-    # ---------------------------------------------
+    # --------------------------------------------------
     @app.post("/api/doctors")
     def create_doctor():
         d = request.json or {}
@@ -175,8 +170,20 @@ def create_app():
                 "Salary": float(d.Salary) if d.Salary else None,
                 "Specialty": d.Specialty,
                 "Contact": d.Contact
-            } for d in rows
+            }
+            for d in rows
         ])
+
+    @app.get("/api/doctors/<int:did>")
+    def get_doctor(did):
+        d = Doctor.query.get_or_404(did)
+        return {
+            "Doctor_ID": d.Doctor_ID,
+            "Name": d.Name,
+            "Salary": float(d.Salary) if d.Salary else None,
+            "Specialty": d.Specialty,
+            "Contact": d.Contact
+        }
 
     @app.put("/api/doctors/<int:did>")
     def update_doctor(did):
@@ -204,9 +211,9 @@ def create_app():
         db.session.commit()
         return {"deleted": did}
 
-    # ---------------------------------------------
+    # --------------------------------------------------
     # NURSE CRUD (ISA)
-    # ---------------------------------------------
+    # --------------------------------------------------
     @app.post("/api/nurses")
     def create_nurse():
         d = request.json or {}
@@ -228,8 +235,19 @@ def create_app():
                 "Name": n.Name,
                 "Salary": float(n.Salary) if n.Salary else None,
                 "Contact": n.Contact
-            } for n in rows
+            }
+            for n in rows
         ])
+
+    @app.get("/api/nurses/<int:nid>")
+    def get_nurse(nid):
+        n = Nurse.query.get_or_404(nid)
+        return {
+            "Nurse_ID": n.Nurse_ID,
+            "Name": n.Name,
+            "Salary": float(n.Salary) if n.Salary else None,
+            "Contact": n.Contact
+        }
 
     @app.put("/api/nurses/<int:nid>")
     def update_nurse(nid):
@@ -256,9 +274,9 @@ def create_app():
         db.session.commit()
         return {"deleted": nid}
 
-    # ---------------------------------------------
+    # --------------------------------------------------
     # RECEPTIONIST CRUD (ISA)
-    # ---------------------------------------------
+    # --------------------------------------------------
     @app.post("/api/receptionists")
     def create_receptionist():
         d = request.json or {}
@@ -280,8 +298,19 @@ def create_app():
                 "Name": x.Name,
                 "Salary": float(x.Salary) if x.Salary else None,
                 "Contact": x.Contact
-            } for x in rows
+            }
+            for x in rows
         ])
+
+    @app.get("/api/receptionists/<int:rid>")
+    def get_receptionist(rid):
+        r = Receptionist.query.get_or_404(rid)
+        return {
+            "Receptionist_ID": r.Receptionist_ID,
+            "Name": r.Name,
+            "Salary": float(r.Salary) if r.Salary else None,
+            "Contact": r.Contact
+        }
 
     @app.put("/api/receptionists/<int:rid>")
     def update_receptionist(rid):
@@ -308,9 +337,9 @@ def create_app():
         db.session.commit()
         return {"deleted": rid}
 
-    # ---------------------------------------------
-    # ROOM
-    # ---------------------------------------------
+    # --------------------------------------------------
+    # ROOM CRUD
+    # --------------------------------------------------
     @app.post("/api/rooms")
     def create_room():
         d = request.json or {}
@@ -327,11 +356,14 @@ def create_app():
     @app.get("/api/rooms")
     def list_rooms():
         rows = Room.query.all()
-        return jsonify([{c.name: getattr(r, c.name) for c in r.__table__.columns} for r in rows])
+        return jsonify([
+            {c.name: getattr(r, c.name) for c in r.__table__.columns}
+            for r in rows
+        ])
 
-    # ---------------------------------------------
-    # MEDICATION
-    # ---------------------------------------------
+    # --------------------------------------------------
+    # MEDICATION CRUD
+    # --------------------------------------------------
     @app.post("/api/medications")
     def create_medication():
         d = request.json or {}
@@ -347,20 +379,29 @@ def create_app():
     @app.get("/api/medications")
     def list_medications():
         rows = Medication.query.all()
-        return jsonify([{c.name: getattr(m, c.name) for c in m.__table__.columns} for m in rows])
+        return jsonify([
+            {c.name: getattr(m, c.name) for c in m.__table__.columns}
+            for m in rows
+        ])
 
-    # ---------------------------------------------
+    # --------------------------------------------------
     # BILLS / VISITS / RECOMMENDATIONS / SCHEDULE / RESOURCE
-    # ---------------------------------------------
+    # --------------------------------------------------
     @app.get("/api/bills")
     def list_bills():
         rows = Bill.query.all()
-        return jsonify([{c.name: getattr(r, c.name) for c in r.__table__.columns} for r in rows])
+        return jsonify([
+            {c.name: getattr(r, c.name) for c in r.__table__.columns}
+            for r in rows
+        ])
 
     @app.get("/api/patients/<int:pid>/bills")
     def bills_for_patient(pid):
         rows = Bill.query.filter_by(Patient_ID=pid).all()
-        return jsonify([{c.name: getattr(b, c.name) for c in b.__table__.columns} for b in rows])
+        return jsonify([
+            {c.name: getattr(b, c.name) for c in b.__table__.columns}
+            for b in rows
+        ])
 
     @app.post("/api/visits")
     def create_visit():
@@ -378,7 +419,10 @@ def create_app():
     @app.get("/api/visits/<int:pid>")
     def get_visits(pid):
         rows = Visit.query.filter_by(Patient_ID=pid).all()
-        return jsonify([{c.name: getattr(v, c.name) for c in v.__table__.columns} for v in rows])
+        return jsonify([
+            {c.name: getattr(v, c.name) for c in v.__table__.columns}
+            for v in rows
+        ])
 
     @app.post("/api/recommendations")
     def create_recommendation():
@@ -391,21 +435,30 @@ def create_app():
     @app.get("/api/recommendations/<int:pid>")
     def get_recommendations(pid):
         rows = Recommendation.query.filter_by(Patient_ID=pid).all()
-        return jsonify([{c.name: getattr(x, c.name) for c in x.__table__.columns} for x in rows])
+        return jsonify([
+            {c.name: getattr(x, c.name) for c in x.__table__.columns}
+            for x in rows
+        ])
 
     @app.get("/api/schedule/<int:eid>")
     def get_schedule(eid):
         rows = Schedule.query.filter_by(Employee_ID=eid).all()
-        return jsonify([{c.name: getattr(s, c.name) for c in s.__table__.columns} for s in rows])
+        return jsonify([
+            {c.name: getattr(s, c.name) for c in s.__table__.columns}
+            for s in rows
+        ])
 
     @app.get("/api/resources")
     def get_resources():
         rows = Resource.query.all()
-        return jsonify([{c.name: getattr(r, c.name) for c in r.__table__.columns} for r in rows])
+        return jsonify([
+            {c.name: getattr(r, c.name) for c in r.__table__.columns}
+            for r in rows
+        ])
 
-    # ---------------------------------------------
+    # --------------------------------------------------
     # ANALYTICS
-    # ---------------------------------------------
+    # --------------------------------------------------
     @app.get("/api/analytics/patient_flow")
     def patient_flow():
         rows = (
@@ -438,13 +491,14 @@ def create_app():
 
         return {
             "most_expensive_procedures": [
-                {"treatment": t, "avg_cost": float(c)} for t, c in rows[:5]
+                {"treatment": t, "avg_cost": float(c)}
+                for t, c in rows[:5]
             ]
         }
 
-    # ---------------------------------------------
+    # --------------------------------------------------
     # ROOM SHORTAGE FORECAST (ADVANCED ANALYTICS)
-    # ---------------------------------------------
+    # --------------------------------------------------
     @app.get("/api/analytics/room_shortage_forecast")
     def room_shortage_forecast():
         total_rooms = Room.query.count()
