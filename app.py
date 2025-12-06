@@ -24,9 +24,9 @@ def create_app():
     CORS(app)
     db.init_app(app)
 
-    # --------------------------------------------------
+    # ---------------------------------------------
     # ROOT / HEALTH / CREATE TABLES
-    # --------------------------------------------------
+    # ---------------------------------------------
     @app.get("/")
     def index():
         return {"message": "Backend is running"}
@@ -41,9 +41,9 @@ def create_app():
     def health():
         return {"status": "ok"}
 
-    # --------------------------------------------------
+    # ---------------------------------------------
     # PATIENT CRUD
-    # --------------------------------------------------
+    # ---------------------------------------------
     @app.get("/api/patients")
     def list_patients():
         rows = Patient.query.all()
@@ -108,36 +108,38 @@ def create_app():
         db.session.commit()
         return {"deleted": pid}
 
-    # --------------------------------------------------
-    # EMPLOYEE (ISA parent)
-    # --------------------------------------------------
+    # ---------------------------------------------
+    # EMPLOYEES (PARENT)
+    # ---------------------------------------------
     @app.get("/api/employees")
     def list_employees():
         employees = Employee.query.all()
-
         output = []
+
         for e in employees:
             data = {
-            "Employee_ID": e.Employee_ID,
-            "Name": e.Name,
-            "Salary": float(e.Salary) if e.Salary else None,
-            "Type": e.Type
+                "Employee_ID": e.Employee_ID,
+                "Name": e.Name,
+                "Salary": float(e.Salary) if e.Salary else None,
+                "Type": e.Type
             }
 
-            # Include subclass-specific fields
-            if isinstance(e, Doctor):
-                data["Specialty"] = e.Specialty
-                data["Contact"] = e.Contact
+            if e.Type == "Doctor":
+                doc = Doctor.query.get(e.Employee_ID)
+                data["Specialty"] = doc.Specialty
+                data["Contact"] = doc.Contact
 
-            if isinstance(e, Nurse):
-                data["Contact"] = e.Contact
+            elif e.Type == "Nurse":
+                nurse = Nurse.query.get(e.Employee_ID)
+                data["Contact"] = nurse.Contact
 
-            if isinstance(e, Receptionist):
-                data["Contact"] = e.Contact
+            elif e.Type == "Receptionist":
+                rec = Receptionist.query.get(e.Employee_ID)
+                data["Contact"] = rec.Contact
+
             output.append(data)
 
         return jsonify(output)
-
 
     @app.post("/api/employees")
     def create_employee():
@@ -147,14 +149,12 @@ def create_app():
         db.session.commit()
         return {"created": e.Employee_ID}, 201
 
-    # --------------------------------------------------
-    # DOCTOR (ISA Employee) – CORRECTED
-    # --------------------------------------------------
+    # ---------------------------------------------
+    # DOCTOR CRUD (ISA)
+    # ---------------------------------------------
     @app.post("/api/doctors")
     def create_doctor():
         d = request.json or {}
-
-        # Because Doctor inherits from Employee, just create the Doctor.
         doctor = Doctor(
             Name=d.get("Name"),
             Salary=d.get("Salary"),
@@ -163,23 +163,20 @@ def create_app():
         )
         db.session.add(doctor)
         db.session.commit()
-
         return {"created": doctor.Doctor_ID}, 201
 
     @app.get("/api/doctors")
     def list_doctors():
         rows = Doctor.query.all()
-        # include inherited columns too
-        result = []
-        for doc in rows:
-            result.append({
-                "Doctor_ID": doc.Doctor_ID,
-                "Name": doc.Name,
-                "Salary": float(doc.Salary) if doc.Salary is not None else None,
-                "Specialty": doc.Specialty,
-                "Contact": doc.Contact,
-            })
-        return jsonify(result)
+        return jsonify([
+            {
+                "Doctor_ID": d.Doctor_ID,
+                "Name": d.Name,
+                "Salary": float(d.Salary) if d.Salary else None,
+                "Specialty": d.Specialty,
+                "Contact": d.Contact
+            } for d in rows
+        ])
 
     @app.put("/api/doctors/<int:did>")
     def update_doctor(did):
@@ -191,21 +188,28 @@ def create_app():
                 setattr(d_obj, field, data[field])
 
         db.session.commit()
+
         return {
             "Doctor_ID": d_obj.Doctor_ID,
             "Name": d_obj.Name,
-            "Salary": float(d_obj.Salary) if d_obj.Salary is not None else None,
+            "Salary": float(d_obj.Salary) if d_obj.Salary else None,
             "Specialty": d_obj.Specialty,
-            "Contact": d_obj.Contact,
+            "Contact": d_obj.Contact
         }
 
-    # --------------------------------------------------
-    # NURSE (ISA Employee) – CORRECTED
-    # --------------------------------------------------
+    @app.delete("/api/doctors/<int:did>")
+    def delete_doctor(did):
+        d = Doctor.query.get_or_404(did)
+        db.session.delete(d)
+        db.session.commit()
+        return {"deleted": did}
+
+    # ---------------------------------------------
+    # NURSE CRUD (ISA)
+    # ---------------------------------------------
     @app.post("/api/nurses")
     def create_nurse():
         d = request.json or {}
-
         nurse = Nurse(
             Name=d.get("Name"),
             Salary=d.get("Salary"),
@@ -213,29 +217,51 @@ def create_app():
         )
         db.session.add(nurse)
         db.session.commit()
-
         return {"created": nurse.Nurse_ID}, 201
 
     @app.get("/api/nurses")
     def list_nurses():
         rows = Nurse.query.all()
-        result = []
-        for n in rows:
-            result.append({
+        return jsonify([
+            {
                 "Nurse_ID": n.Nurse_ID,
                 "Name": n.Name,
-                "Salary": float(n.Salary) if n.Salary is not None else None,
-                "Contact": n.Contact,
-            })
-        return jsonify(result)
+                "Salary": float(n.Salary) if n.Salary else None,
+                "Contact": n.Contact
+            } for n in rows
+        ])
 
-    # --------------------------------------------------
-    # RECEPTIONIST (ISA Employee) – CORRECTED
-    # --------------------------------------------------
+    @app.put("/api/nurses/<int:nid>")
+    def update_nurse(nid):
+        n_obj = Nurse.query.get_or_404(nid)
+        data = request.json or {}
+
+        for field in ["Name", "Salary", "Contact"]:
+            if field in data:
+                setattr(n_obj, field, data[field])
+
+        db.session.commit()
+
+        return {
+            "Nurse_ID": n_obj.Nurse_ID,
+            "Name": n_obj.Name,
+            "Salary": float(n_obj.Salary) if n_obj.Salary else None,
+            "Contact": n_obj.Contact
+        }
+
+    @app.delete("/api/nurses/<int:nid>")
+    def delete_nurse(nid):
+        n = Nurse.query.get_or_404(nid)
+        db.session.delete(n)
+        db.session.commit()
+        return {"deleted": nid}
+
+    # ---------------------------------------------
+    # RECEPTIONIST CRUD (ISA)
+    # ---------------------------------------------
     @app.post("/api/receptionists")
     def create_receptionist():
         d = request.json or {}
-
         r = Receptionist(
             Name=d.get("Name"),
             Salary=d.get("Salary"),
@@ -243,25 +269,48 @@ def create_app():
         )
         db.session.add(r)
         db.session.commit()
-
         return {"created": r.Receptionist_ID}, 201
 
     @app.get("/api/receptionists")
     def list_receptionists():
         rows = Receptionist.query.all()
-        result = []
-        for x in rows:
-            result.append({
+        return jsonify([
+            {
                 "Receptionist_ID": x.Receptionist_ID,
                 "Name": x.Name,
-                "Salary": float(x.Salary) if x.Salary is not None else None,
-                "Contact": x.Contact,
-            })
-        return jsonify(result)
+                "Salary": float(x.Salary) if x.Salary else None,
+                "Contact": x.Contact
+            } for x in rows
+        ])
 
-    # --------------------------------------------------
+    @app.put("/api/receptionists/<int:rid>")
+    def update_receptionist(rid):
+        r_obj = Receptionist.query.get_or_404(rid)
+        data = request.json or {}
+
+        for field in ["Name", "Salary", "Contact"]:
+            if field in data:
+                setattr(r_obj, field, data[field])
+
+        db.session.commit()
+
+        return {
+            "Receptionist_ID": r_obj.Receptionist_ID,
+            "Name": r_obj.Name,
+            "Salary": float(r_obj.Salary) if r_obj.Salary else None,
+            "Contact": r_obj.Contact
+        }
+
+    @app.delete("/api/receptionists/<int:rid>")
+    def delete_receptionist(rid):
+        r = Receptionist.query.get_or_404(rid)
+        db.session.delete(r)
+        db.session.commit()
+        return {"deleted": rid}
+
+    # ---------------------------------------------
     # ROOM
-    # --------------------------------------------------
+    # ---------------------------------------------
     @app.post("/api/rooms")
     def create_room():
         d = request.json or {}
@@ -280,9 +329,9 @@ def create_app():
         rows = Room.query.all()
         return jsonify([{c.name: getattr(r, c.name) for c in r.__table__.columns} for r in rows])
 
-    # --------------------------------------------------
+    # ---------------------------------------------
     # MEDICATION
-    # --------------------------------------------------
+    # ---------------------------------------------
     @app.post("/api/medications")
     def create_medication():
         d = request.json or {}
@@ -300,9 +349,9 @@ def create_app():
         rows = Medication.query.all()
         return jsonify([{c.name: getattr(m, c.name) for c in m.__table__.columns} for m in rows])
 
-    # --------------------------------------------------
+    # ---------------------------------------------
     # BILLS / VISITS / RECOMMENDATIONS / SCHEDULE / RESOURCE
-    # --------------------------------------------------
+    # ---------------------------------------------
     @app.get("/api/bills")
     def list_bills():
         rows = Bill.query.all()
@@ -354,9 +403,9 @@ def create_app():
         rows = Resource.query.all()
         return jsonify([{c.name: getattr(r, c.name) for c in r.__table__.columns} for r in rows])
 
-    # --------------------------------------------------
+    # ---------------------------------------------
     # ANALYTICS
-    # --------------------------------------------------
+    # ---------------------------------------------
     @app.get("/api/analytics/patient_flow")
     def patient_flow():
         rows = (
@@ -391,6 +440,67 @@ def create_app():
             "most_expensive_procedures": [
                 {"treatment": t, "avg_cost": float(c)} for t, c in rows[:5]
             ]
+        }
+
+    # ---------------------------------------------
+    # ROOM SHORTAGE FORECAST (ADVANCED ANALYTICS)
+    # ---------------------------------------------
+    @app.get("/api/analytics/room_shortage_forecast")
+    def room_shortage_forecast():
+        total_rooms = Room.query.count()
+        occupied_rooms = Room.query.filter_by(Status="Occupied").count()
+        available_rooms = total_rooms - occupied_rooms
+
+        admission_rows = (
+            db.session.query(Patient.AdmissionDate, func.count(Patient.Patient_ID))
+            .filter(Patient.AdmissionDate.isnot(None))
+            .group_by(Patient.AdmissionDate)
+            .order_by(Patient.AdmissionDate)
+            .all()
+        )
+
+        if not admission_rows:
+            return {"error": "Not enough admission data to forecast."}
+
+        counts = [c for _, c in admission_rows]
+        window = min(5, len(counts))
+        predicted_next_day = sum(counts[-window:]) / window
+
+        los_rows = (
+            db.session.query(
+                func.avg(
+                    func.julianday(Patient.DischargeDate)
+                    - func.julianday(Patient.AdmissionDate)
+                )
+            )
+            .filter(Patient.DischargeDate.isnot(None))
+            .all()
+        )
+
+        avg_los = los_rows[0][0] if los_rows and los_rows[0][0] else 3
+
+        if predicted_next_day == 0:
+            projected_shortage_days = None
+        else:
+            projected_shortage_days = available_rooms / predicted_next_day
+
+        if projected_shortage_days is None:
+            risk = "LOW"
+        elif projected_shortage_days < 1:
+            risk = "CRITICAL"
+        elif projected_shortage_days < 3:
+            risk = "HIGH"
+        else:
+            risk = "MODERATE"
+
+        return {
+            "total_rooms": total_rooms,
+            "occupied_rooms": occupied_rooms,
+            "available_rooms": available_rooms,
+            "predicted_next_day_admissions": round(predicted_next_day, 2),
+            "average_length_of_stay_days": round(avg_los, 2),
+            "projected_shortage_in_days": round(projected_shortage_days, 2) if projected_shortage_days else None,
+            "risk": risk
         }
 
     return app
