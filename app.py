@@ -556,6 +556,60 @@ def create_app():
             "projected_shortage_in_days": round(projected_shortage_days, 2) if projected_shortage_days else None,
             "risk": risk
         }
+    # --------------------------------------------------
+    # RESOURCE OPTIMIZATION (NEW ADVANCED ANALYTICS)
+    # --------------------------------------------------
+    @app.get("/api/analytics/resource_optimization_v2")
+    def resource_optimization_v2():
+
+        # 1. AVERAGE COST PER PROCEDURE
+        procedure_costs = (
+            db.session.query(
+                Bill.Treatment,
+                func.avg(Bill.Total_Amount).label("avg_cost")
+            )
+            .group_by(Bill.Treatment)
+            .order_by(func.avg(Bill.Total_Amount).desc())
+            .all()
+        )
+
+        # 2. AVERAGE LENGTH OF STAY PER PROCEDURE
+        los_by_treatment = (
+            db.session.query(
+                Bill.Treatment,
+                func.avg(
+                    func.julianday(Patient.DischargeDate)
+                    - func.julianday(Patient.AdmissionDate)
+                ).label("avg_los")
+            )
+            .join(Patient, Patient.Patient_ID == Bill.Patient_ID)
+            .filter(Patient.DischargeDate.isnot(None))
+            .group_by(Bill.Treatment)
+            .all()
+        )
+
+        # 3. EQUIPMENT USAGE SUMMARY (grouped by Resource.Name)
+        equipment_usage = (
+            db.session.query(
+                Resource.Name,
+                func.count(Resource.Resource_ID).label("usage_count")
+            )
+            .group_by(Resource.Name)
+            .order_by(func.count(Resource.Resource_ID).desc())
+            .all()
+        )
+
+        return {
+            "procedure_costs": [
+                {"treatment": t, "avg_cost": float(c)} for t, c in procedure_costs
+            ],
+            "procedure_length_of_stay": [
+                {"treatment": t, "avg_los_days": round(los, 2)} for t, los in los_by_treatment
+            ],
+            "equipment_usage": [
+                {"equipment_name": name, "usage_count": count} for name, count in equipment_usage
+            ]
+        }
 
     return app
 
