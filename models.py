@@ -3,9 +3,7 @@ from datetime import datetime
 
 db = SQLAlchemy()
 
-# --------------------------------------------------
-# EMPLOYEE (ISA parent)
-# --------------------------------------------------
+
 class Employee(db.Model):
     __tablename__ = "EMPLOYEE"
 
@@ -20,9 +18,7 @@ class Employee(db.Model):
         "polymorphic_on": Type
     }
 
-# --------------------------------------------------
-# DOCTOR (ISA EMPLOYEE)
-# --------------------------------------------------
+
 class Doctor(Employee):
     __tablename__ = "DOCTOR"
 
@@ -39,9 +35,7 @@ class Doctor(Employee):
         "polymorphic_identity": "Doctor"
     }
 
-# --------------------------------------------------
-# NURSE (ISA EMPLOYEE)
-# --------------------------------------------------
+
 class Nurse(Employee):
     __tablename__ = "NURSE"
 
@@ -57,9 +51,7 @@ class Nurse(Employee):
         "polymorphic_identity": "Nurse"
     }
 
-# --------------------------------------------------
-# RECEPTIONIST (ISA EMPLOYEE)
-# --------------------------------------------------
+
 class Receptionist(Employee):
     __tablename__ = "RECEPTIONIST"
 
@@ -75,9 +67,7 @@ class Receptionist(Employee):
         "polymorphic_identity": "Receptionist"
     }
 
-# --------------------------------------------------
-# ROOM
-# --------------------------------------------------
+
 class Room(db.Model):
     __tablename__ = "ROOM"
 
@@ -88,9 +78,7 @@ class Room(db.Model):
 
     Nurse_ID = db.Column(db.Integer, db.ForeignKey("NURSE.Nurse_ID"))
 
-# --------------------------------------------------
-# PATIENT
-# --------------------------------------------------
+
 class Patient(db.Model):
     __tablename__ = "PATIENT"
 
@@ -109,9 +97,7 @@ class Patient(db.Model):
 
     Room_ID = db.Column(db.Integer, db.ForeignKey("ROOM.Room_ID"))
 
-# --------------------------------------------------
-# MEDICATION
-# --------------------------------------------------
+
 class Medication(db.Model):
     __tablename__ = "MEDICATION"
 
@@ -120,9 +106,7 @@ class Medication(db.Model):
     Dosage = db.Column(db.String(100))
     Patient_ID = db.Column(db.Integer, db.ForeignKey("PATIENT.Patient_ID"))
 
-# --------------------------------------------------
-# BILL
-# --------------------------------------------------
+
 class Bill(db.Model):
     __tablename__ = "BILL"
 
@@ -131,9 +115,7 @@ class Bill(db.Model):
     Treatment = db.Column(db.Text)
     Total_Amount = db.Column(db.Numeric(12, 2))
 
-# --------------------------------------------------
-# VISIT
-# --------------------------------------------------
+
 class Visit(db.Model):
     __tablename__ = "VISIT"
 
@@ -143,9 +125,7 @@ class Visit(db.Model):
     VisitDate = db.Column(db.Date)
     Notes = db.Column(db.Text)
 
-# --------------------------------------------------
-# RECOMMENDATION
-# --------------------------------------------------
+
 class Recommendation(db.Model):
     __tablename__ = "RECOMMENDATION"
 
@@ -153,9 +133,7 @@ class Recommendation(db.Model):
     Patient_ID = db.Column(db.Integer)
     Text = db.Column(db.Text)
 
-# --------------------------------------------------
-# SCHEDULE
-# --------------------------------------------------
+
 class Schedule(db.Model):
     __tablename__ = "SCHEDULE"
 
@@ -164,9 +142,7 @@ class Schedule(db.Model):
     WorkDate = db.Column(db.Date)
     Shift = db.Column(db.String(50))
 
-# --------------------------------------------------
-# RESOURCE
-# --------------------------------------------------
+
 class Resource(db.Model):
     __tablename__ = "RESOURCE"
 
